@@ -548,7 +548,7 @@ const App: React.FC = () => {
 
     const referrer = document.referrer;
     if (
-      referrer.includes("app-siswa-pkbm.vercel.app") ||
+      referrer.includes("app-siswa-pkbm3.vercel.app") ||
       window.location.search.includes("from=pkbm")
     ) {
       setIsFromPKBM(true);
@@ -1749,7 +1749,7 @@ const App: React.FC = () => {
     // 👇 Jika Siswa, langsung redirect duluan SEBELUM state apa pun diubah
     // agar tidak sempat render ulang ke halaman login lokal
     if (userRole === "Siswa") {
-      window.location.href = "https://app-siswa-pkbm.vercel.app/";
+      window.location.href = "https://app-siswa-pkbm3.vercel.app/";
       return;
     }
 
