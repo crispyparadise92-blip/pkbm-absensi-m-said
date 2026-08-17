@@ -2880,15 +2880,17 @@ const App: React.FC = () => {
 
         {/* ✅ TAMBAHKAN KONDISI: Tombol Kembali hanya muncul jika dari link PKBM */}
         {isFromPKBM && (
-          <div className="mt-4">
-            <button
-              onClick={() => window.history.back()}
-              className="block w-full text-center bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg transition duration-200"
-            >
-              ← Kembali
-            </button>
-          </div>
-        )}
+  <div className="mt-4">
+    <button
+      onClick={() => {
+        window.location.href = "https://app-siswa-pkbm3.vercel.app/";
+      }}
+      className="block w-full text-center bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg transition duration-200"
+    >
+      ← Kembali
+    </button>
+  </div>
+)}
       </div>
     </div>
   );
