@@ -229,6 +229,10 @@ const App: React.FC = () => {
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
   const [tempAbsensi, setTempAbsensi] = useState<{ [key: string]: string }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const [photoSource, setPhotoSource] = useState<"camera" | "gallery">(
+    "camera"
+  );
   const teacherPhotoInputRef = useRef<HTMLInputElement>(null);
   const [teacherPhoto, setTeacherPhoto] = useState<string | null>(null);
   const [teacherPhotoBase64, setTeacherPhotoBase64] = useState<string | null>(
@@ -591,7 +595,7 @@ const App: React.FC = () => {
     if (studentLocation && pendingPhotoFile) {
       const file = pendingPhotoFile;
       setPendingPhotoFile(null);
-      processStudentPhoto(file);
+      processStudentPhoto(file, true); // jalur ini selalu dari kamera
     }
   }, [studentLocation, pendingPhotoFile]);
 
@@ -1264,8 +1268,11 @@ const App: React.FC = () => {
     });
   };
 
-  const processStudentPhoto = async (file: File) => {
-    if (!studentLocation) return; // Jaga-jaga, seharusnya tidak terpanggil tanpa lokasi
+  const processStudentPhoto = async (
+    file: File,
+    withLocationStamp: boolean = true
+  ) => {
+    if (withLocationStamp && !studentLocation) return; // Hanya wajib ada lokasi jika mau distempel
 
     try {
       setForm(
@@ -1276,11 +1283,10 @@ const App: React.FC = () => {
         })
       );
 
-      const base64 = await compressImageWithLocationStamp(
-        file,
-        studentLocation,
-        0.8
-      );
+      const base64 = withLocationStamp
+        ? await compressImageWithLocationStamp(file, studentLocation, 0.8)
+        : await compressImage(file, 0.8);
+
       const compressedSizeKB = Math.round((base64.length * 3) / 4 / 1024);
       console.log(`Ukuran gambar setelah kompresi: ${compressedSizeKB} KB`);
 
@@ -1332,6 +1338,14 @@ const App: React.FC = () => {
         return;
       }
 
+      // ✅ BARU: Foto dari GALERI → proses langsung TANPA tag lokasi, tanpa nunggu GPS
+      if (photoSource === "gallery") {
+        await processStudentPhoto(file, false);
+        event.target.value = "";
+        return;
+      }
+
+      // Foto dari KAMERA → tetap seperti semula (butuh lokasi + stempel)
       if (!studentLocation) {
         // ✅ Jangan batalkan foto: simpan dulu, proses otomatis begitu GPS siap
         setPendingPhotoFile(file);
@@ -1347,14 +1361,22 @@ const App: React.FC = () => {
         return;
       }
 
-      await processStudentPhoto(file);
+      await processStudentPhoto(file, true);
       event.target.value = "";
     }
   };
 
   const openCameraApp = () => {
+    setPhotoSource("camera");
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+
+  const openGalleryApp = () => {
+    setPhotoSource("gallery");
+    if (galleryInputRef.current) {
+      galleryInputRef.current.click();
     }
   };
 
@@ -2880,17 +2902,17 @@ const App: React.FC = () => {
 
         {/* ✅ TAMBAHKAN KONDISI: Tombol Kembali hanya muncul jika dari link PKBM */}
         {isFromPKBM && (
-  <div className="mt-4">
-    <button
-      onClick={() => {
-        window.location.href = "https://app-siswa-pkbm3.vercel.app/";
-      }}
-      className="block w-full text-center bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg transition duration-200"
-    >
-      ← Kembali
-    </button>
-  </div>
-)}
+          <div className="mt-4">
+            <button
+              onClick={() => {
+                window.location.href = "https://app-siswa-pkbm3.vercel.app/";
+              }}
+              className="block w-full text-center bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg transition duration-200"
+            >
+              ← Kembali
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -3000,8 +3022,17 @@ const App: React.FC = () => {
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                capture="environment"
                 onChange={handleFileSelect}
                 disabled={isCheckingAttendance} // ✅ Disable saat loading
+                style={{ display: "none" }}
+              />
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                disabled={isCheckingAttendance}
                 style={{ display: "none" }}
               />
 
@@ -3013,10 +3044,22 @@ const App: React.FC = () => {
                     disabled={form.loading || isCheckingAttendance} // ✅ Disable saat loading
                     className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center disabled:opacity-50"
                   >
-                    {form.loading ? "⏳ Memproses..." : "📸 Buka Kamera HP"}
+                    {form.loading && photoSource === "camera"
+                      ? "⏳ Memproses..."
+                      : "📸 Buka Kamera HP"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openGalleryApp}
+                    disabled={form.loading || isCheckingAttendance}
+                    className="w-full bg-gray-600 text-white p-3 rounded-lg hover:bg-gray-700 transition duration-200 flex items-center justify-center disabled:opacity-50"
+                  >
+                    {form.loading && photoSource === "gallery"
+                      ? "⏳ Memproses..."
+                      : "🖼️ Pilih dari Galeri"}
                   </button>
                   <div className="text-xs text-gray-500 text-center">
-                    Akan membuka aplikasi kamera HP Anda
+                    Foto dari kamera diberi tag lokasi, foto dari galeri tidak
                   </div>
                 </div>
               )}
