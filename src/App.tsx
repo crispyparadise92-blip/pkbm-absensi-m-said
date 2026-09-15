@@ -1767,11 +1767,20 @@ const App: React.FC = () => {
     }
   };
 
+    const kembaliKePKBM = () => {
+    if (window.top !== window.self) {
+      // Sedang berjalan di dalam iframe → minta halaman induk (picker) yang reset
+      window.top?.postMessage({ type: "PKBM_KEMBALI" }, "*");
+    } else {
+      window.location.href = "https://app-siswa-pkbm3.vercel.app/";
+    }
+  };
+
   const handleLogout = () => {
     // 👇 Jika Siswa, langsung redirect duluan SEBELUM state apa pun diubah
     // agar tidak sempat render ulang ke halaman login lokal
-    if (userRole === "Siswa") {
-      window.location.href = "https://app-siswa-pkbm3.vercel.app/";
+        if (userRole === "Siswa") {
+      kembaliKePKBM();
       return;
     }
 
@@ -2903,10 +2912,8 @@ const App: React.FC = () => {
         {/* ✅ TAMBAHKAN KONDISI: Tombol Kembali hanya muncul jika dari link PKBM */}
         {isFromPKBM && (
           <div className="mt-4">
-            <button
-              onClick={() => {
-                window.location.href = "https://app-siswa-pkbm3.vercel.app/";
-              }}
+                        <button
+              onClick={kembaliKePKBM}
               className="block w-full text-center bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg transition duration-200"
             >
               ← Kembali
