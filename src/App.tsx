@@ -1767,7 +1767,7 @@ const App: React.FC = () => {
     }
   };
 
-    const kembaliKePKBM = () => {
+  const kembaliKePKBM = () => {
     if (window.top !== window.self) {
       // Sedang berjalan di dalam iframe → minta halaman induk (picker) yang reset
       window.top?.postMessage({ type: "PKBM_KEMBALI" }, "*");
@@ -1779,7 +1779,7 @@ const App: React.FC = () => {
   const handleLogout = () => {
     // 👇 Jika Siswa, langsung redirect duluan SEBELUM state apa pun diubah
     // agar tidak sempat render ulang ke halaman login lokal
-        if (userRole === "Siswa") {
+    if (userRole === "Siswa") {
       kembaliKePKBM();
       return;
     }
@@ -2912,7 +2912,7 @@ const App: React.FC = () => {
         {/* ✅ TAMBAHKAN KONDISI: Tombol Kembali hanya muncul jika dari link PKBM */}
         {isFromPKBM && (
           <div className="mt-4">
-                        <button
+            <button
               onClick={kembaliKePKBM}
               className="block w-full text-center bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-lg transition duration-200"
             >
@@ -6108,11 +6108,15 @@ const App: React.FC = () => {
       const mapelSiswa = (form.mapel || "").toString().trim().toLowerCase();
 
       if (mapelSiswa.includes("guru kelas sd")) {
-        // Guru Kelas SD mengajar semua mapel dalam satu paket,
-        // jadi tampilkan SEMUA materi dengan paket = "A (SD)"
-        filteredMateri = materiData.filter(
-          (m) => (m.paket || "").trim().toLowerCase() === "a (sd)"
-        );
+        // Guru Kelas SD mengajar semua mapel dalam satu paket (A/SD),
+        // TAPI tetap harus sesuai kelas siswa yang login
+        filteredMateri = materiData.filter((m) => {
+          const matchPaket = (m.paket || "").trim().toLowerCase() === "a (sd)";
+          const matchKelas = kelasSiswa
+            ? m.kelas.trim().toLowerCase() === kelasSiswa
+            : true;
+          return matchPaket && matchKelas;
+        });
       } else {
         filteredMateri = materiData.filter((m) => {
           const matchKelas = kelasSiswa
@@ -6150,7 +6154,8 @@ const App: React.FC = () => {
           <div className="mb-4 text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
             {(form.mapel || "").toLowerCase().includes("guru kelas sd") ? (
               <>
-                Menampilkan semua materi Paket <strong>A (SD)</strong>
+                Menampilkan semua materi Paket <strong>A (SD)</strong> untuk
+                Kelas <strong>{form.class || "-"}</strong>
               </>
             ) : (
               <>
