@@ -520,11 +520,7 @@ const App: React.FC = () => {
       );
     }, 1000);
 
-    const referrer = document.referrer;
-    if (
-      referrer.includes("ajappai-v1.vercel.app") ||
-      window.location.search.includes("from=pkbm")
-    ) {
+        if (window.location.search.includes("from=pkbm")) {
       setIsFromPKBM(true);
       setLoginForm((prev) => ({
         ...prev,
