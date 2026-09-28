@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-import * as XLSX from "xlsx";
 
 const ENDPOINT =
   "https://script.google.com/macros/s/AKfycbxxP9XnheQg6PzynXSwokLTwkK1vIBypZzIvZ_zB4ucSpDa1b4fB9RYSjjpADS0BQMntg/exec";
@@ -40,11 +39,6 @@ interface TeacherData {
   name: string;
 }
 
-interface KepsekData {
-  nomorinduk: string;
-  name: string;
-}
-
 // Example updated interface (around line 38):
 interface FormState {
   date: string;
@@ -70,13 +64,6 @@ interface TeacherAttendanceFormState {
   loading: boolean;
 }
 
-interface TeacherManagementFormState {
-  nip: string;
-  name: string;
-  error: string;
-  loading: boolean;
-}
-
 interface StudentFormState {
   nisn: string;
   name: string;
@@ -86,7 +73,7 @@ interface StudentFormState {
 }
 
 interface LoginFormState {
-  role: "Guru" | "Siswa" | "Kepala Sekolah" | "";
+  role: "Guru" | "Siswa" | "";
   name: string;
   idNumber: string;
   error: string;
@@ -143,9 +130,7 @@ interface ProcessedAttendance extends Attendance {
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<
-    "Guru" | "Siswa" | "Kepala Sekolah" | null
-  >(null);
+  const [userRole, setUserRole] = useState<"Guru" | "Siswa" | null>(null);
   const [currentPage, setCurrentPage] = useState<
     | "form"
     | "data"
@@ -197,9 +182,7 @@ const App: React.FC = () => {
     error: "",
     loading: false,
   });
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importError, setImportError] = useState<string>("");
-  const [importLoading, setImportLoading] = useState<boolean>(false);
+
   const [loginForm, setLoginForm] = useState<LoginFormState>({
     role: "",
     name: "",
@@ -255,17 +238,9 @@ const App: React.FC = () => {
     attendedMapel?: string; // 👈 Tambahkan ini (opsional dengan ? agar bisa undefined jika tidak ada)
   }>({ hasAttended: false, attendanceDate: "", attendedMapel: "" });
 
-  const [kepsekData, setKepsekData] = useState<KepsekData[]>(
-    () => getCachedInitialData()?.kepsek || []
-  );
-  const [teacherFormState, setTeacherFormState] =
-    useState<TeacherManagementFormState>({
-      nip: "",
-      name: "",
-      error: "",
-      loading: false,
-    });
   const [filterKelas, setFilterKelas] = useState(""); // Default "Semua" seperti gambar
+  const [filterKelasSiswa, setFilterKelasSiswa] = useState("");
+  const [filterNamaSiswa, setFilterNamaSiswa] = useState("");
   const [summaryAbsensi, setSummaryAbsensi] = useState({
     hadir: 0,
     izin: 0,
@@ -275,11 +250,6 @@ const App: React.FC = () => {
   const [absensiHariIni, setAbsensiHariIni] = useState<{
     [key: string]: string;
   }>({});
-  const [editTeacher, setEditTeacher] = useState<TeacherData | null>(null);
-  const [deleteTeacherNip, setDeleteTeacherNip] = useState<string | null>(null);
-  const [showAddTeacherModal, setShowAddTeacherModal] = useState(false);
-  const [showEditTeacherModal, setShowEditTeacherModal] = useState(false);
-  const [showDeleteTeacherModal, setShowDeleteTeacherModal] = useState(false);
 
   const [monthlyRecapData, setMonthlyRecapData] = useState<MonthlyRecap[]>([]);
   const [selectedMonthRecap, setSelectedMonthRecap] =
@@ -447,12 +417,12 @@ const App: React.FC = () => {
             const freshData = {
               students: result.students || [],
               teachers: result.teachers || [],
-              kepsek: result.kepsek || [],
+
               mapel: result.mapel || [],
             };
             setStudentData(freshData.students);
             setTeacherData(freshData.teachers);
-            setKepsekData(freshData.kepsek);
+
             setMapelData(freshData.mapel);
             localStorage.setItem(
               INITIAL_DATA_CACHE_KEY,
@@ -853,17 +823,6 @@ const App: React.FC = () => {
     );
   };
 
-  const handleTeacherFormInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const { name, value } = e.target;
-    setTeacherFormState((prev: TeacherManagementFormState) => ({
-      ...prev,
-      [name]: value,
-      error: "",
-    }));
-  };
-
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -1021,12 +980,6 @@ const App: React.FC = () => {
         (item) =>
           item.name === loginForm.name && item.nisn === loginForm.idNumber
       );
-    } else if (loginForm.role === "Kepala Sekolah") {
-      // Tambahkan ini
-      isValid = kepsekData.some(
-        (item) =>
-          item.name === loginForm.name && item.nomorinduk === loginForm.idNumber
-      );
     }
 
     if (isValid) {
@@ -1061,9 +1014,6 @@ const App: React.FC = () => {
       } else if (loginForm.role === "Guru") {
         setCurrentPage("teacherForm");
         fetchMapelData();
-      } else if (loginForm.role === "Kepala Sekolah") {
-        // Tambahkan ini
-        setCurrentPage("teacherData");
       }
 
       setLoginForm({
@@ -1185,8 +1135,13 @@ const App: React.FC = () => {
         if (location) {
           const timestamp = new Date().toLocaleString("id-ID", {
             timeZone: "Asia/Makassar",
-            dateStyle: "medium",
-            timeStyle: "medium",
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
           });
 
           const rawLines = [
@@ -1777,12 +1732,9 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    // 👇 Jika Siswa, langsung redirect duluan SEBELUM state apa pun diubah
-    // agar tidak sempat render ulang ke halaman login lokal
-    if (userRole === "Siswa") {
-      kembaliKePKBM();
-      return;
-    }
+    // Semua role (Guru & Siswa) langsung diarahkan ke halaman PKBM
+    window.location.href = "https://app-siswa-pkbm3.vercel.app/";
+    return;
 
     setIsLoggedIn(false);
     setUserRole(null);
@@ -2261,332 +2213,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleImportExcel = async () => {
-    if (!importFile) {
-      setImportError("Pilih file Excel terlebih dahulu.");
-      return;
-    }
-
-    setImportLoading(true);
-    setImportError("");
-
-    try {
-      // Baca file Excel
-      const arrayBuffer = await importFile.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-        header: 1,
-      }) as any[][];
-
-      // Validasi header (baris pertama harus NISN, Nama, Kelas)
-      const header = jsonData[0].map((h: string) => h.trim().toLowerCase());
-      if (
-        header[0] !== "nisn" ||
-        header[1] !== "nama" ||
-        header[2] !== "kelas"
-      ) {
-        setImportError("Header Excel harus: NISN, Nama, Kelas.");
-        setImportLoading(false);
-        return;
-      }
-
-      // Parse data (mulai dari baris kedua)
-      const students: StudentData[] = jsonData
-        .slice(1)
-        .map((row: any[]) => ({
-          nisn: row[0]?.toString() || "",
-          name: row[1]?.toString() || "",
-          class: row[2]?.toString() || "",
-        }))
-        .filter((student) => student.nisn && student.name && student.class); // Filter data tidak lengkap
-
-      if (students.length === 0) {
-        setImportError("Tidak ada data valid di Excel.");
-        setImportLoading(false);
-        return;
-      }
-
-      // Cek duplikat lokal (opsional: untuk feedback cepat)
-      const duplicates = students.filter((s) =>
-        studentData.some((existing) => existing.nisn === s.nisn)
-      );
-      if (duplicates.length > 0) {
-        setImportError(
-          `Duplikat NISN ditemukan: ${duplicates
-            .map((s) => s.nisn)
-            .join(", ")}. Data ini akan diabaikan di backend.`
-        );
-      }
-
-      // Kirim ke backend
-      const response = await fetch(ENDPOINT, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "importStudents",
-          students: students,
-        }),
-      });
-
-      if (response.type === "opaque") {
-        // Update state lokal (tambah data baru yang belum ada)
-        setStudentData((prev) => {
-          const newData = [...prev];
-          students.forEach((student) => {
-            if (!newData.some((s) => s.nisn === student.nisn)) {
-              newData.push(student);
-            }
-          });
-          return newData;
-        });
-        alert(`Berhasil import ${students.length} data siswa!`);
-        setImportFile(null); // Reset file
-      } else {
-        throw new Error("Unexpected response type");
-      }
-    } catch (error: any) {
-      console.error("Error importing Excel:", error);
-      setImportError(`Gagal import: ${error.message}`);
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
-  const handleDownloadTemplate = () => {
-    try {
-      const headers = ["NISN", "Nama", "Kelas"]; // Header template sederhana
-      const data = [headers]; // Hanya header, tanpa data tambahan (kosong)
-
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      ws["!cols"] = [{ wch: 15 }, { wch: 30 }, { wch: 10 }]; // Lebar kolom opsional untuk tampilan bagus
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Template Siswa");
-
-      // Buat blob dari workbook (sama seperti kode-mu)
-      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([wbout], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-
-      // Nama file dinamis (opsional, seperti kode-mu)
-      const date = new Date()
-        .toLocaleString("id-ID", {
-          day: "2-digit",
-          month: "long",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        })
-        .replace(/ /g, "_")
-        .replace(/:/g, "-");
-      const fileName = `Template_Siswa_${date}.xlsx`;
-
-      // Cek apakah browser mendukung download langsung (handling IE/Edge & Mobile, seperti kode-mu)
-      if (window.navigator && (window.navigator as any).msSaveOrOpenBlob) {
-        // IE & Edge
-        (window.navigator as any).msSaveOrOpenBlob(blob, fileName);
-      } else {
-        // Browser modern & Mobile
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = fileName;
-        link.style.display = "none";
-
-        document.body.appendChild(link);
-        link.click();
-
-        // Cleanup dengan timeout (seperti kode-mu, lebih aman di HP)
-        setTimeout(() => {
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-        }, 100);
-      }
-
-      // Tampilkan notifikasi sukses (seperti kode-mu)
-      alert("✅ Template Excel berhasil diunduh!");
-    } catch (error) {
-      console.error("Error saat download Template Excel:", error);
-      alert("❌ Gagal mengunduh template Excel. Silakan coba lagi.");
-    }
-  };
-
-  const handleAddTeacher = async () => {
-    if (!teacherFormState.nip || !teacherFormState.name) {
-      setTeacherFormState((prev: TeacherManagementFormState) => ({
-        ...prev,
-        error: "Harap lengkapi semua field",
-      }));
-      return;
-    }
-
-    if (teacherData.some((t) => t.nip === teacherFormState.nip)) {
-      setTeacherFormState((prev: TeacherManagementFormState) => ({
-        ...prev,
-        error: "NIP sudah ada",
-      }));
-      return;
-    }
-
-    setTeacherFormState((prev: TeacherManagementFormState) => ({
-      ...prev,
-      loading: true,
-      error: "",
-    }));
-
-    try {
-      const response = await fetch(ENDPOINT, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "addTeacher",
-          nip: teacherFormState.nip,
-          name: teacherFormState.name,
-        }),
-      });
-
-      if (response.type === "opaque") {
-        setTeacherData((prev) => [
-          ...prev,
-          {
-            nip: teacherFormState.nip,
-            name: teacherFormState.name,
-          },
-        ]);
-        setTeacherFormState({
-          nip: "",
-          name: "",
-          error: "",
-          loading: false,
-        });
-        setShowAddTeacherModal(false);
-        alert("Data guru berhasil ditambahkan!");
-      } else {
-        throw new Error("Unexpected response type");
-      }
-    } catch (error: any) {
-      console.error("Error adding teacher:", error);
-      setTeacherFormState((prev: TeacherManagementFormState) => ({
-        ...prev,
-        error: `Gagal menambahkan guru: ${error.message}`,
-        loading: false,
-      }));
-    }
-  };
-
-  const handleEditTeacher = async () => {
-    if (!editTeacher || !teacherFormState.nip || !teacherFormState.name) {
-      setTeacherFormState((prev: TeacherManagementFormState) => ({
-        ...prev,
-        error: "Harap lengkapi semua field",
-      }));
-      return;
-    }
-
-    setTeacherFormState((prev: TeacherManagementFormState) => ({
-      ...prev,
-      loading: true,
-      error: "",
-    }));
-
-    try {
-      const response = await fetch(ENDPOINT, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "editTeacher",
-          originalNip: editTeacher.nip,
-          nip: teacherFormState.nip,
-          name: teacherFormState.name,
-        }),
-      });
-
-      if (response.type === "opaque") {
-        setTeacherData((prev) =>
-          prev.map((t) =>
-            t.nip === editTeacher.nip
-              ? {
-                  nip: teacherFormState.nip,
-                  name: teacherFormState.name,
-                }
-              : t
-          )
-        );
-        setTeacherFormState({
-          nip: "",
-          name: "",
-          error: "",
-          loading: false,
-        });
-        setShowEditTeacherModal(false);
-        setEditTeacher(null);
-        alert("Data guru berhasil diperbarui!");
-      } else {
-        throw new Error("Unexpected response type");
-      }
-    } catch (error: any) {
-      console.error("Error editing teacher:", error);
-      setTeacherFormState((prev: TeacherManagementFormState) => ({
-        ...prev,
-        error: `Gagal memperbarui guru: ${error.message}`,
-        loading: false,
-      }));
-    }
-  };
-
-  const handleDeleteTeacher = async () => {
-    if (!deleteTeacherNip) return;
-
-    setTeacherFormState((prev: TeacherManagementFormState) => ({
-      ...prev,
-      loading: true,
-      error: "",
-    }));
-
-    try {
-      const response = await fetch(ENDPOINT, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "deleteTeacher",
-          nip: deleteTeacherNip,
-        }),
-      });
-
-      if (response.type === "opaque") {
-        setTeacherData((prev) =>
-          prev.filter((t) => t.nip !== deleteTeacherNip)
-        );
-        setShowDeleteTeacherModal(false);
-        setDeleteTeacherNip(null);
-        alert("Data guru berhasil dihapus!");
-      } else {
-        throw new Error("Unexpected response type");
-      }
-    } catch (error: any) {
-      console.error("Error deleting teacher:", error);
-      setTeacherFormState((prev: TeacherManagementFormState) => ({
-        ...prev,
-        error: `Gagal menghapus guru: ${error.message}`,
-        loading: false,
-      }));
-    }
-  };
-
   const handlePageChange = (
     page:
       | "form"
@@ -2795,7 +2421,6 @@ const App: React.FC = () => {
           <option value="">Pilih Peran</option>
           <option value="Guru">Guru</option>
           <option value="Siswa">Siswa</option>
-          <option value="Kepala Sekolah">Kepala Sekolah</option>
         </select>
 
         {loginForm.role === "Siswa" && (
@@ -2863,12 +2488,6 @@ const App: React.FC = () => {
                     {item.name}
                   </option>
                 ))
-            : loginForm.role === "Kepala Sekolah"
-            ? kepsekData.map((item) => (
-                <option key={item.nomorinduk} value={item.name}>
-                  {item.name}
-                </option>
-              ))
             : null}
         </select>
 
@@ -2882,8 +2501,6 @@ const App: React.FC = () => {
               ? "NIP"
               : loginForm.role === "Siswa"
               ? "NISN"
-              : loginForm.role === "Kepala Sekolah"
-              ? "Nomor Induk"
               : "Nomor Induk"
           }
           disabled={
@@ -5251,68 +4868,53 @@ const App: React.FC = () => {
     );
   };
 
+  const getFilteredStudentList = () =>
+    studentData.filter((s) => {
+      const matchKelas = filterKelasSiswa ? s.class === filterKelasSiswa : true;
+      const matchNama = filterNamaSiswa
+        ? s.name.toLowerCase().includes(filterNamaSiswa.trim().toLowerCase())
+        : true;
+      return matchKelas && matchNama;
+    });
+
   const renderStudentsPage = () => (
     <div className="bg-white shadow-lg rounded-lg p-6">
       <div className="mb-4 flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-900">Data Siswa</h2>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => {
-              setStudentForm({
-                nisn: "",
-                name: "",
-                class: "",
-                error: "",
-                loading: false,
-              });
-              setShowAddModal(true);
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
-          >
-            Tambah Siswa
-          </button>
-          {studentData.length > 0 && ( // Tambahkan kondisi ini agar tombol hanya muncul jika ada data
-            <button
-              onClick={() => setShowDeleteAllModal(true)} // Perbaiki: hapus } ekstra
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200"
-            >
-              Hapus Semua Siswa
-            </button>
-          )}
-          {/* Tambahkan tombol download di sini */}
-          <button
-            onClick={handleDownloadTemplate}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200"
-          >
-            Download Template Excel
-          </button>
-        </div>
       </div>
-      {/* Tambahkan bagian import di sini */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Import Data Siswa dari Excel (Header: NISN, Nama, Kelas)
-        </label>
-        <div className="flex items-center space-x-2">
-          <input
-            type="file"
-            accept=".xlsx, .xls"
-            onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-            className="p-2 border border-gray-300 rounded-lg"
-          />
-          <button
-            onClick={handleImportExcel}
-            disabled={importLoading || !importFile}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200 disabled:opacity-50"
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Filter Kelas
+          </label>
+          <select
+            value={filterKelasSiswa}
+            onChange={(e) => setFilterKelasSiswa(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            {importLoading ? "⏳ Mengimpor..." : "Import"}
-          </button>
+            <option value="">Semua Kelas</option>
+            {[...new Set(studentData.map((s) => s.class).filter(Boolean))].map(
+              (kelas) => (
+                <option key={kelas} value={kelas}>
+                  {kelas}
+                </option>
+              )
+            )}
+          </select>
         </div>
-        {importError && (
-          <div className="mt-2 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg">
-            {importError}
-          </div>
-        )}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Cari Nama
+          </label>
+          <input
+            type="text"
+            value={filterNamaSiswa}
+            onChange={(e) => setFilterNamaSiswa(e.target.value)}
+            placeholder="Ketik nama siswa..."
+            className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
       </div>
 
       {studentForm.error && (
@@ -5328,49 +4930,21 @@ const App: React.FC = () => {
               <th className="px-4 py-2">NISN</th>
               <th className="px-4 py-2">Nama</th>
               <th className="px-4 py-2">Kelas</th>
-              <th className="px-4 py-2">Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {studentData.length === 0 ? (
+            {getFilteredStudentList().length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
                   Tidak ada data siswa
                 </td>
               </tr>
             ) : (
-              studentData.map((student, index) => (
+              getFilteredStudentList().map((student, index) => (
                 <tr key={index} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-2">{student.nisn}</td>
                   <td className="px-4 py-2">{student.name}</td>
                   <td className="px-4 py-2">{student.class}</td>
-                  <td className="px-4 py-2 flex space-x-2">
-                    <button
-                      onClick={() => {
-                        setEditStudent(student);
-                        setStudentForm({
-                          nisn: student.nisn,
-                          name: student.name,
-                          class: student.class,
-                          error: "",
-                          loading: false,
-                        });
-                        setShowEditModal(true);
-                      }}
-                      className="bg-yellow-600 text-white px-3 py-1 rounded-lg hover:bg-yellow-700 transition duration-200"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => {
-                        setDeleteStudentNisn(student.nisn);
-                        setShowDeleteModal(true);
-                      }}
-                      className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition duration-200"
-                    >
-                      Hapus
-                    </button>
-                  </td>
                 </tr>
               ))
             )}
@@ -5731,171 +5305,12 @@ const App: React.FC = () => {
   };
 
   const renderMapelDataPage = () => {
-    const handleAddMapel = async () => {
-      if (!newMapelForm.mapel || newMapelForm.mapel.trim() === "") {
-        setNewMapelForm({
-          ...newMapelForm,
-          error: "Nama mata pelajaran wajib diisi",
-        });
-        return;
-      }
-
-      // Cek duplikat lokal
-      if (mapelData.some((m) => m.mapel === newMapelForm.mapel.trim())) {
-        setNewMapelForm({
-          ...newMapelForm,
-          error: "Mata pelajaran sudah ada",
-        });
-        return;
-      }
-
-      setNewMapelForm({ ...newMapelForm, loading: true, error: "" });
-
-      try {
-        const response = await fetch(ENDPOINT, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "addMapel", // ❌ TUNGGU! Ini belum ada di Apps Script!
-            mapel: newMapelForm.mapel.trim(),
-          }),
-        });
-
-        // JANGAN LUPA: Di Apps Script, kita belum punya fungsi addMapel!
-        // Kita akan buatnya di Langkah 6.
-        if (response.type === "opaque") {
-          setMapelData([...mapelData, { mapel: newMapelForm.mapel.trim() }]);
-          setNewMapelForm({ mapel: "", error: "", loading: false });
-          setShowAddMapelModal(false);
-          alert("Mata pelajaran berhasil ditambahkan!");
-        } else {
-          throw new Error("Unexpected response type");
-        }
-      } catch (error: any) {
-        console.error("Error adding mapel:", error);
-        setNewMapelForm({
-          ...newMapelForm,
-          error: `Gagal menambahkan mata pelajaran: ${error.message}`,
-          loading: false,
-        });
-      }
-    };
-
-    const handleEditMapel = async () => {
-      if (
-        !editMapel ||
-        !newMapelForm.mapel ||
-        newMapelForm.mapel.trim() === ""
-      ) {
-        setNewMapelForm({
-          ...newMapelForm,
-          error: "Nama mata pelajaran wajib diisi",
-        });
-        return;
-      }
-
-      // Cek duplikat (kecuali dirinya sendiri)
-      if (
-        mapelData.some(
-          (m) =>
-            m.mapel === newMapelForm.mapel.trim() && m.mapel !== editMapel.mapel
-        )
-      ) {
-        setNewMapelForm({
-          ...newMapelForm,
-          error: "Mata pelajaran sudah ada",
-        });
-        return;
-      }
-
-      setNewMapelForm({ ...newMapelForm, loading: true, error: "" });
-
-      try {
-        const response = await fetch(ENDPOINT, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "editMapel", // ❌ BELUM ADA di Apps Script!
-            originalMapel: editMapel.mapel,
-            mapel: newMapelForm.mapel.trim(),
-          }),
-        });
-
-        if (response.type === "opaque") {
-          setMapelData(
-            mapelData.map((m) =>
-              m.mapel === editMapel.mapel
-                ? { mapel: newMapelForm.mapel.trim() }
-                : m
-            )
-          );
-          setNewMapelForm({ mapel: "", error: "", loading: false });
-          setShowEditMapelModal(false);
-          setEditMapel(null);
-          alert("Mata pelajaran berhasil diperbarui!");
-        } else {
-          throw new Error("Unexpected response type");
-        }
-      } catch (error: any) {
-        console.error("Error editing mapel:", error);
-        setNewMapelForm({
-          ...newMapelForm,
-          error: `Gagal memperbarui mata pelajaran: ${error.message}`,
-          loading: false,
-        });
-      }
-    };
-
-    const handleDeleteMapel = async () => {
-      if (!deleteMapelId) return;
-
-      setNewMapelForm({ ...newMapelForm, loading: true, error: "" });
-
-      try {
-        const response = await fetch(ENDPOINT, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "deleteMapel", // ❌ BELUM ADA di Apps Script!
-            mapel: deleteMapelId,
-          }),
-        });
-
-        if (response.type === "opaque") {
-          setMapelData(mapelData.filter((m) => m.mapel !== deleteMapelId));
-          setShowDeleteMapelModal(false);
-          setDeleteMapelId(null);
-          alert("Mata pelajaran berhasil dihapus!");
-        } else {
-          throw new Error("Unexpected response type");
-        }
-      } catch (error: any) {
-        console.error("Error deleting mapel:", error);
-        setNewMapelForm({
-          ...newMapelForm,
-          error: `Gagal menghapus mata pelajaran: ${error.message}`,
-          loading: false,
-        });
-      }
-    };
     return (
       <div className="bg-white shadow-lg rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-900">
             Data Mata Pelajaran
           </h2>
-          <button
-            onClick={() => {
-              setNewMapelForm({ mapel: "", error: "", loading: false });
-              setShowAddMapelModal(true);
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
-          >
-            Tambah Mapel
-          </button>
         </div>
 
         {loadingMapel ? (
@@ -5909,14 +5324,13 @@ const App: React.FC = () => {
               <thead className="text-xs uppercase bg-gray-200">
                 <tr>
                   <th className="px-4 py-2">Mata Pelajaran</th>
-                  <th className="px-4 py-2">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {mapelData.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={2}
+                      colSpan={1}
                       className="px-4 py-8 text-center text-gray-500"
                     >
                       Tidak ada data mata pelajaran
@@ -5926,162 +5340,11 @@ const App: React.FC = () => {
                   mapelData.map((mapel, index) => (
                     <tr key={index} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-2">{mapel.mapel}</td>
-                      <td className="px-4 py-2 flex space-x-2">
-                        <button
-                          onClick={() => {
-                            setEditMapel(mapel);
-                            setNewMapelForm({
-                              mapel: mapel.mapel,
-                              error: "",
-                              loading: false,
-                            });
-                            setShowEditMapelModal(true);
-                          }}
-                          className="bg-yellow-600 text-white px-3 py-1 rounded-lg hover:bg-yellow-700 transition duration-200"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => {
-                            setDeleteMapelId(mapel.mapel); // Gunakan mapel sebagai ID karena tidak ada field id
-                            setShowDeleteMapelModal(true);
-                          }}
-                          className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition duration-200"
-                        >
-                          Hapus
-                        </button>
-                      </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
-          </div>
-        )}
-
-        {/* Modal Tambah Mapel */}
-        {showAddMapelModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-semibold mb-4">
-                Tambah Mata Pelajaran
-              </h2>
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  value={newMapelForm.mapel}
-                  onChange={(e) =>
-                    setNewMapelForm({
-                      ...newMapelForm,
-                      mapel: e.target.value,
-                      error: "",
-                    })
-                  }
-                  placeholder="Nama Mata Pelajaran"
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {newMapelForm.error && (
-                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg">
-                    {newMapelForm.error}
-                  </div>
-                )}
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleAddMapel}
-                    disabled={newMapelForm.loading}
-                    className="flex-1 bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition duration-200 disabled:opacity-50"
-                  >
-                    {newMapelForm.loading ? "⏳ Menyimpan..." : "Simpan"}
-                  </button>
-                  <button
-                    onClick={() => setShowAddMapelModal(false)}
-                    className="flex-1 bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400 transition duration-200"
-                  >
-                    Batal
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Edit Mapel */}
-        {showEditMapelModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-semibold mb-4">
-                Edit Mata Pelajaran
-              </h2>
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  value={newMapelForm.mapel}
-                  onChange={(e) =>
-                    setNewMapelForm({
-                      ...newMapelForm,
-                      mapel: e.target.value,
-                      error: "",
-                    })
-                  }
-                  placeholder="Nama Mata Pelajaran Baru"
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {newMapelForm.error && (
-                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg">
-                    {newMapelForm.error}
-                  </div>
-                )}
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleEditMapel}
-                    disabled={newMapelForm.loading}
-                    className="flex-1 bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition duration-200 disabled:opacity-50"
-                  >
-                    {newMapelForm.loading ? "⏳ Memperbarui..." : "Perbarui"}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowEditMapelModal(false);
-                      setEditMapel(null);
-                    }}
-                    className="flex-1 bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400 transition duration-200"
-                  >
-                    Batal
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Konfirmasi Hapus Mapel */}
-        {showDeleteMapelModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-semibold mb-4">Konfirmasi Hapus</h2>
-              <p className="mb-4">
-                Apakah Anda yakin ingin menghapus mata pelajaran "
-                {deleteMapelId}"? Tindakan ini tidak dapat dibatalkan.
-              </p>
-              <div className="flex space-x-2">
-                <button
-                  onClick={handleDeleteMapel}
-                  disabled={newMapelForm.loading}
-                  className="flex-1 bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition duration-200 disabled:opacity-50"
-                >
-                  {newMapelForm.loading ? "⏳ Menghapus..." : "Hapus"}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDeleteMapelModal(false);
-                    setDeleteMapelId(null);
-                  }}
-                  className="flex-1 bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400 transition duration-200"
-                >
-                  Batal
-                </button>
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -6534,217 +5797,6 @@ const App: React.FC = () => {
     );
   };
 
-  const renderTeacherDataPage = () => (
-    <div className="bg-white shadow-lg rounded-lg p-6">
-      <div className="mb-4 flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">Data Guru</h2>
-        <button
-          onClick={() => {
-            setTeacherFormState({
-              nip: "",
-              name: "",
-              error: "",
-              loading: false,
-            });
-            setShowAddTeacherModal(true);
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
-        >
-          Tambah Guru
-        </button>
-      </div>
-
-      {teacherFormState.error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
-          {teacherFormState.error}
-        </div>
-      )}
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left text-gray-700">
-          <thead className="text-xs uppercase bg-gray-200">
-            <tr>
-              <th className="px-4 py-2">NIP</th>
-              <th className="px-4 py-2">Nama</th>
-              <th className="px-4 py-2">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {teacherData.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
-                  Tidak ada data guru
-                </td>
-              </tr>
-            ) : (
-              teacherData.map((teacher, index) => (
-                <tr key={index} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-2">{teacher.nip}</td>
-                  <td className="px-4 py-2">{teacher.name}</td>
-                  <td className="px-4 py-2 flex space-x-2">
-                    <button
-                      onClick={() => {
-                        setEditTeacher(teacher);
-                        setTeacherFormState({
-                          nip: teacher.nip,
-                          name: teacher.name,
-                          error: "",
-                          loading: false,
-                        });
-                        setShowEditTeacherModal(true);
-                      }}
-                      className="bg-yellow-600 text-white px-3 py-1 rounded-lg hover:bg-yellow-700 transition duration-200"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => {
-                        setDeleteTeacherNip(teacher.nip);
-                        setShowDeleteTeacherModal(true);
-                      }}
-                      className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition duration-200"
-                    >
-                      Hapus
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Add Teacher Modal */}
-      {showAddTeacherModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">Tambah Guru</h2>
-            <div className="space-y-4">
-              <input
-                type="text"
-                name="nip"
-                value={teacherFormState.nip}
-                onChange={handleTeacherFormInputChange}
-                placeholder="NIP"
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                name="name"
-                value={teacherFormState.name}
-                onChange={handleTeacherFormInputChange}
-                placeholder="Nama"
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {teacherFormState.error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg">
-                  {teacherFormState.error}
-                </div>
-              )}
-              <div className="flex space-x-2">
-                <button
-                  onClick={handleAddTeacher}
-                  disabled={teacherFormState.loading}
-                  className="flex-1 bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition duration-200 disabled:opacity-50"
-                >
-                  {teacherFormState.loading ? "⏳ Menyimpan..." : "Simpan"}
-                </button>
-                <button
-                  onClick={() => setShowAddTeacherModal(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400 transition duration-200"
-                >
-                  Batal
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Teacher Modal */}
-      {showEditTeacherModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">Edit Guru</h2>
-            <div className="space-y-4">
-              <input
-                type="text"
-                name="nip"
-                value={teacherFormState.nip}
-                onChange={handleTeacherFormInputChange}
-                placeholder="NIP"
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                name="name"
-                value={teacherFormState.name}
-                onChange={handleTeacherFormInputChange}
-                placeholder="Nama"
-                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {teacherFormState.error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg">
-                  {teacherFormState.error}
-                </div>
-              )}
-              <div className="flex space-x-2">
-                <button
-                  onClick={handleEditTeacher}
-                  disabled={teacherFormState.loading}
-                  className="flex-1 bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition duration-200 disabled:opacity-50"
-                >
-                  {teacherFormState.loading ? "⏳ Memperbarui..." : "Perbarui"}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowEditTeacherModal(false);
-                    setEditTeacher(null);
-                  }}
-                  className="flex-1 bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400 transition duration-200"
-                >
-                  Batal
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Teacher Confirmation Modal */}
-      {showDeleteTeacherModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">Konfirmasi Hapus</h2>
-            <p className="mb-4">
-              Apakah Anda yakin ingin menghapus data guru ini?
-            </p>
-            {teacherFormState.error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded-lg mb-4">
-                {teacherFormState.error}
-              </div>
-            )}
-            <div className="flex space-x-2">
-              <button
-                onClick={handleDeleteTeacher}
-                disabled={teacherFormState.loading}
-                className="flex-1 bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition duration-200 disabled:opacity-50"
-              >
-                {teacherFormState.loading ? "⏳ Menghapus..." : "Hapus"}
-              </button>
-              <button
-                onClick={() => setShowDeleteTeacherModal(false)}
-                className="flex-1 bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400 transition duration-200"
-              >
-                Batal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
       <div className="relative py-3 sm:max-w-4xl sm:mx-auto w-full max-w-4xl mx-auto px-4">
@@ -6899,18 +5951,6 @@ const App: React.FC = () => {
                         📎 Upload Tugas
                       </button>
                     )}
-                    {userRole === "Kepala Sekolah" && (
-                      <button
-                        onClick={() => handlePageChange("teacherData")}
-                        className={`px-6 py-2 rounded-md transition duration-200 ${
-                          currentPage === "teacherData"
-                            ? "bg-blue-600 text-white"
-                            : "text-gray-600 hover:bg-gray-100"
-                        }`}
-                      >
-                        👨‍🏫 Data Guru
-                      </button>
-                    )}
                   </>
                 )}
                 {/* Tombol Logout selalu ada */}
@@ -6931,8 +5971,6 @@ const App: React.FC = () => {
               ? renderDataPage()
               : currentPage === "students" && userRole === "Guru"
               ? renderStudentsPage()
-              : currentPage === "teacherData" && userRole === "Kepala Sekolah" // Tambahkan ini
-              ? renderTeacherDataPage()
               : currentPage === "monthlyRecap" && userRole === "Guru"
               ? renderMonthlyRecapPage()
               : currentPage === "mapelData" && userRole === "Guru" // ✅ TAMBAHKAN INI
