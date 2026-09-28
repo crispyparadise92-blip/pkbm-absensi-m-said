@@ -522,7 +522,7 @@ const App: React.FC = () => {
 
     const referrer = document.referrer;
     if (
-      referrer.includes("app-siswa-pkbm3.vercel.app") ||
+      referrer.includes("ajappai-v1.vercel.app") ||
       window.location.search.includes("from=pkbm")
     ) {
       setIsFromPKBM(true);
@@ -1727,12 +1727,12 @@ const App: React.FC = () => {
       // Sedang berjalan di dalam iframe → minta halaman induk (picker) yang reset
       window.top?.postMessage({ type: "PKBM_KEMBALI" }, "*");
     } else {
-      window.location.href = "https://app-siswa-pkbm3.vercel.app/";
+      window.location.href = "https://ajappai-v1.vercel.app/";
     }
   };
 
   const handleLogout = () => {
-    window.location.href = "https://app-siswa-pkbm3.vercel.app/";
+    window.location.href = "https://ajappai-v1.vercel.app/";
   };
 
   // Ganti handleSubmitStatus menjadi handleSelectStatus
