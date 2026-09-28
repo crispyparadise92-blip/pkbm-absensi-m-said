@@ -3893,8 +3893,8 @@ const App: React.FC = () => {
                   const x = data.cell.x + (data.cell.width - imgWidth) / 2; // Center horizontally
                   const y = data.cell.y + (data.cell.height - imgHeight) / 2; // Center vertically
 
-                  doc.addImage(
-                    attendance.processedPhoto,
+                                    doc.addImage(
+                    attendance.processedPhoto as string,
                     "JPEG",
                     x,
                     y,
