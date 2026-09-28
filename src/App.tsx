@@ -294,7 +294,8 @@ const App: React.FC = () => {
     loading: false,
   });
   const [selectedMapelGuru, setSelectedMapelGuru] = useState("");
-  const [isFromPKBM, setIsFromPKBM] = useState(false);
+    const [isFromPKBM, setIsFromPKBM] = useState(false);
+  const [isFromGuru, setIsFromGuru] = useState(false);
   const [mapelFromParam, setMapelFromParam] = useState<string | null>(null);
   const [selectedClass, setSelectedClass] = useState("");
   const [deleteAttendanceId, setDeleteAttendanceId] = useState<{
