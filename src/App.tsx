@@ -2357,7 +2357,7 @@ const App: React.FC = () => {
           name="role"
           value={loginForm.role}
           onChange={handleLoginInputChange}
-          disabled={isFromPKBM} // ✅ TAMBAH INI: Disable jika dari PKBM (role auto Siswa, tidak bisa ganti)
+                    disabled={isFromPKBM || isFromGuru}
           className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" // ✅ Tambah disabled:opacity-50 untuk visual
         >
           <option value="">Pilih Peran</option>
