@@ -1732,7 +1732,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    window.location.href = "https://ajappai-v1.vercel.app/";
+    kembaliKePKBM();
   };
 
   // Ganti handleSubmitStatus menjadi handleSelectStatus
