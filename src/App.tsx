@@ -321,9 +321,14 @@ const App: React.FC = () => {
   const [isPhotoPreviewLoading, setIsPhotoPreviewLoading] = useState(false);
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
+        const urlParams = new URLSearchParams(window.location.search);
     const fromPKBM = urlParams.get("from") === "pkbm";
     const mapelParam = urlParams.get("mapel");
+
+    if (urlParams.get("from") === "guru") {
+      setIsFromGuru(true);
+      setLoginForm((prev) => ({ ...prev, role: "Guru" }));
+    }
 
     if (fromPKBM) {
       setIsFromPKBM(true);
