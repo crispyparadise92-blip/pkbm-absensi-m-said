@@ -1732,67 +1732,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    // Semua role (Guru & Siswa) langsung diarahkan ke halaman PKBM
     window.location.href = "https://app-siswa-pkbm3.vercel.app/";
-    return;
-
-    setIsLoggedIn(false);
-    setUserRole(null);
-    setCurrentPage("form");
-    setIsPolling(false);
-    setIsManualTime(false);
-    setIsManualDate(false);
-
-    // Dapatkan tanggal dan jam saat ini
-    const makassarTime = new Intl.DateTimeFormat("id-ID", {
-      timeZone: "Asia/Makassar",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).formatToParts(new Date());
-
-    const getPart = (part: string) =>
-      makassarTime.find((p) => p.type === part)?.value;
-    const currentDate = `${getPart("year")}-${getPart("month")}-${getPart(
-      "day"
-    )}`;
-    const currentTime = `${getPart("hour")}:${getPart("minute")}`.slice(0, 5);
-
-    // Reset form dengan tanggal dan jam realtime
-    setForm({
-      date: currentDate, // Set ke tanggal saat ini
-      time: currentTime, // Set ke jam saat ini
-      class: "",
-      name: "",
-      nisn: "",
-      photo: null,
-      photoBase64: null,
-      error: "",
-      loading: false,
-    });
-
-    setTeacherForm({
-      date: currentDate, // Set ke tanggal saat ini
-      time: currentTime, // Set ke jam saat ini
-      class: "",
-      name: "",
-      nisn: "",
-      status: "Hadir",
-      error: "",
-      loading: false,
-    });
-
-    // Reset foto guru
-    if (teacherPhoto) {
-      URL.revokeObjectURL(teacherPhoto);
-    }
-    setTeacherPhoto(null);
-    setTeacherPhotoBase64(null);
-
-    alert("Anda telah logout.");
   };
 
   // Ganti handleSubmitStatus menjadi handleSelectStatus
@@ -3893,7 +3833,7 @@ const App: React.FC = () => {
                   const x = data.cell.x + (data.cell.width - imgWidth) / 2; // Center horizontally
                   const y = data.cell.y + (data.cell.height - imgHeight) / 2; // Center vertically
 
-                                    doc.addImage(
+                  doc.addImage(
                     attendance.processedPhoto as string,
                     "JPEG",
                     x,
