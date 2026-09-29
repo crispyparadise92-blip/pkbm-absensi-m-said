@@ -614,26 +614,34 @@ const App: React.FC = () => {
     }
   }, [isLoggedIn, userRole, currentPage]);
 
-  // Auto-fetch + auto-polling untuk halaman data absensi.
-  // ✅ PENTING: efek ini HANYA bergantung pada currentPage/userRole/isLoggedIn,
-  // BUKAN pada filter (selectedMonth/selectedMapel/selectedClass/selectedDate).
-  // Artinya: fetch ke server terjadi SATU KALI saat halaman "data" diakses,
-  // lalu di-refresh otomatis tiap 5 detik oleh polling (tanpa spinner).
-  // Mengubah filter TIDAK memicu fetch baru ke server — filter hanya
-  // menyaring data yang sudah ada di browser (lihat renderDataPage,
-  // bagian .filter() pada attendanceData).
   useEffect(() => {
     let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
-    if (currentPage === "data" && userRole === "Guru" && isLoggedIn) {
+    // Filter dianggap lengkap jika (Bulan + Mapel + Kelas) atau Tanggal sudah dipilih
+    const filterLengkap =
+      (selectedMonth && selectedMapel && selectedClass) || selectedDate;
+
+    if (
+      currentPage === "data" &&
+      userRole === "Guru" &&
+      isLoggedIn &&
+      filterLengkap
+    ) {
+      const filters = {
+        month: selectedMonth,
+        mapel: selectedMapel,
+        class: selectedClass,
+        date: selectedDate,
+      };
+
       setIsPolling(true);
 
-      // Fetch tanpa filter — ambil semua data sekali saat halaman dibuka
-      fetchAttendanceData(true);
+      // Fetch pertama (dengan spinner), hanya data sesuai filter
+      fetchAttendanceData(true, filters);
 
-      // Polling berikutnya tanpa spinner, tetap tanpa filter
+      // Polling tiap 5 detik (tanpa spinner), tetap dengan filter yang sama
       pollingInterval = setInterval(() => {
-        fetchAttendanceData(false);
+        fetchAttendanceData(false, filters);
       }, 5000);
     } else {
       setIsPolling(false);
@@ -645,7 +653,15 @@ const App: React.FC = () => {
         setIsPolling(false);
       }
     };
-  }, [currentPage, userRole, isLoggedIn]);
+  }, [
+    currentPage,
+    userRole,
+    isLoggedIn,
+    selectedMonth,
+    selectedMapel,
+    selectedClass,
+    selectedDate,
+  ]);
 
   useEffect(() => {
     if (currentPage === "monthlyRecap" && userRole === "Guru") {
@@ -653,19 +669,35 @@ const App: React.FC = () => {
     }
   }, [currentPage, selectedMonthRecap]);
 
+  // Efek 1: ambil data dari server (attendanceData TIDAK ada di daftar)
+  useEffect(() => {
+    if (
+      currentPage === "teacherForm" &&
+      userRole === "Guru" &&
+      filterKelas &&
+      selectedMapelGuru
+    ) {
+      fetchAttendanceData(false, {
+        date: teacherForm.date,
+        mapel: selectedMapelGuru,
+        class: filterKelas,
+      });
+    }
+  }, [currentPage, userRole, teacherForm.date, selectedMapelGuru, filterKelas]);
+
+  // Efek 2: hitung ringkasan setiap data berubah (hanya menghitung, tidak fetch)
   useEffect(() => {
     if (currentPage === "teacherForm" && userRole === "Guru") {
-      fetchAttendanceData(false);
       calculateSummary();
     }
   }, [
+    attendanceData,
     currentPage,
     userRole,
-    attendanceData,
     teacherForm.date,
     selectedMapelGuru,
     filterKelas,
-  ]); // 👈 TAMBAHKAN dependensi selectedMapelGuru dan filterKelas
+  ]);
 
   const fetchAttendanceData = async (
     showLoading = true,
