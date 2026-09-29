@@ -16,6 +16,15 @@ const getCachedInitialData = () => {
   }
 };
 
+// Tanggal hari ini (YYYY-MM-DD) sesuai zona waktu Makassar
+const getMakassarDate = (): string =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Makassar",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+
 interface Attendance {
   id: number;
   date: string;
@@ -294,7 +303,7 @@ const App: React.FC = () => {
     loading: false,
   });
   const [selectedMapelGuru, setSelectedMapelGuru] = useState("");
-    const [isFromPKBM, setIsFromPKBM] = useState(false);
+  const [isFromPKBM, setIsFromPKBM] = useState(false);
   const [isFromGuru, setIsFromGuru] = useState(false);
   const [mapelFromParam, setMapelFromParam] = useState<string | null>(null);
   const [selectedClass, setSelectedClass] = useState("");
@@ -321,7 +330,7 @@ const App: React.FC = () => {
   const [isPhotoPreviewLoading, setIsPhotoPreviewLoading] = useState(false);
 
   useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = new URLSearchParams(window.location.search);
     const fromPKBM = urlParams.get("from") === "pkbm";
     const mapelParam = urlParams.get("mapel");
 
@@ -526,7 +535,7 @@ const App: React.FC = () => {
       );
     }, 1000);
 
-        if (window.location.search.includes("from=pkbm")) {
+    if (window.location.search.includes("from=pkbm")) {
       setIsFromPKBM(true);
       setLoginForm((prev) => ({
         ...prev,
@@ -727,9 +736,14 @@ const App: React.FC = () => {
   ) => {
     setIsCheckingAttendance(true); // ✅ Set loading jadi true
     try {
-      const response = await fetch(
-        `${ENDPOINT}?action=getAttendanceData&_t=${Date.now()}`
-      );
+      const params = new URLSearchParams({
+        action: "getAttendanceData",
+        date: date, // format YYYY-MM-DD
+        _t: Date.now().toString(),
+      });
+      if (mapel) params.set("mapel", mapel);
+
+      const response = await fetch(`${ENDPOINT}?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -996,7 +1010,7 @@ const App: React.FC = () => {
           (s) => s.name === loginForm.name && s.nisn === loginForm.idNumber
         );
         if (selectedStudent) {
-          const currentDate = new Date().toISOString().split("T")[0];
+          const currentDate = getMakassarDate();
           setForm((prev) => ({
             ...prev,
             name: selectedStudent.name,
@@ -2357,7 +2371,7 @@ const App: React.FC = () => {
           name="role"
           value={loginForm.role}
           onChange={handleLoginInputChange}
-                    disabled={isFromPKBM || isFromGuru}
+          disabled={isFromPKBM || isFromGuru}
           className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50" // ✅ Tambah disabled:opacity-50 untuk visual
         >
           <option value="">Pilih Peran</option>
